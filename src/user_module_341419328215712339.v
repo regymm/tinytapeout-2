@@ -18,19 +18,19 @@ module user_module_341419328215712339(
 	reg [16:0]breg;
 	wire [15:0]x = {io_in, io_in};
 
-	reg [7:0]mulin1;
-	reg [7:0]mulin2;
+	reg [3:0]mulin1;
+	reg [3:0]mulin2;
 	wire [15:0]mulout;
-	mul #(.WIDTH(8)) mul_inst(
+	Booth_Main #(.n(8)) mul_inst(
 		.a(mulin1),
 		.b(mulin2),
-		.c(mulout)
+		.out(mulout)
 	);
 
-	reg [15:0]addin1;
-	reg [15:0]addin2;
-	wire [16:0]addout;
-	add #(.WIDTH(16)) add_inst(
+	reg [7:0]addin1;
+	reg [7:0]addin2;
+	wire [8:0]addout;
+	add #(.WIDTH(8)) add_inst(
 		.a(addin1),
 		.b(addin2),
 		.c(addout)
@@ -110,67 +110,100 @@ endmodule
  *  or in connection with the use or performance of this software.
  *
  */
-module mul
-#(
-	parameter WIDTH = 16
-)
-(
-	input      [WIDTH-1:0]      a,
-	input      [WIDTH-1:0]      b,
-	output reg [(WIDTH<<1)-1:0] c = 0
-);
+//module mul
+//#(
+	//parameter WIDTH = 16
+//)
+//(
+	//input      [WIDTH-1:0]      a,
+	//input      [WIDTH-1:0]      b,
+	//output reg [(WIDTH<<1)-1:0] c = 0
+//);
 
-reg [(WIDTH<<1)-1:0] tmp;
+//reg [(WIDTH<<1)-1:0] tmp;
 
-reg  [(WIDTH<<1)-1:0] add_a[WIDTH-1:0];
-reg  [(WIDTH<<1)-1:0] add_b[WIDTH-1:0];
-wire [(WIDTH<<1)-1:0] add_y[WIDTH-1:0];
+//reg  [(WIDTH<<1)-1:0] add_a[WIDTH-1:0];
+//reg  [(WIDTH<<1)-1:0] add_b[WIDTH-1:0];
+//wire [(WIDTH<<1)-1:0] add_y[WIDTH-1:0];
 
-genvar k;
-generate for (k = 0; k < WIDTH; k = k +1) begin
-        full_addr #(WIDTH<<1) full_addr_i(add_a[k], add_b[k], add_y[k]);
-    end endgenerate
+//genvar k;
+//generate for (k = 0; k < WIDTH; k = k +1) begin
+        //full_addr #(WIDTH<<1) full_addr_i(add_a[k], add_b[k], add_y[k]);
+    //end endgenerate
 
-integer i;
-integer j;
-generate always @(*) begin
-        tmp = 0;
-        c   = 0;
+//integer i;
+//integer j;
+//generate always @(*) begin
+        //tmp = 0;
+        //c   = 0;
 
-        /* generate parallel structure */
-        for (j = 0; j < WIDTH; j = j + 1) begin
-            for (i = 0; i < WIDTH; i = i + 1) begin
-                tmp[i] = b[i] & a[j];
-            end
-            add_a[j] = c;
-            add_b[j] = (tmp << j);
-            c = add_y[j];
-        end
-    end endgenerate
+        //[> generate parallel structure <]
+        //for (j = 0; j < WIDTH; j = j + 1) begin
+            //for (i = 0; i < WIDTH; i = i + 1) begin
+                //tmp[i] = b[i] & a[j];
+            //end
+            //add_a[j] = c;
+            //add_b[j] = (tmp << j);
+            //c = add_y[j];
+        //end
+    //end endgenerate
 
+//endmodule
+
+    //// carry ripple style
+    //module full_addr
+    //#(
+        //parameter WIDTH = 16
+    //)
+    //(
+        //input      [WIDTH-1:0] a,
+        //input      [WIDTH-1:0] b,
+        //output reg [WIDTH-1:0] y = 0
+    //);
+
+//integer i;
+//reg [WIDTH-1:0] c = 1;
+//generate always @(*) begin
+        //c[0] = 0;
+        //y[0] = c[0] ^ (a[0] ^ b[0]);
+        //c[0] = a[0]&b[0] | b[0]&c[0] | a[0]&c[0];
+        //for (i = 1; i < WIDTH; i = i +1) begin
+            //y[i] = c[i -1] ^ (a[i] ^ b[i]);
+            //c[i] = a[i]&b[i] | b[i]&c[i -1] | a[i]&c[i -1];
+        //end
+    //end endgenerate
+
+//endmodule
+module Booth_Main #(parameter n=8)(out,a,b);
+
+output [(2*n):0]out;
+input [n:0]a,b;
+
+wire [(2*n):0]w[n:0];
+wire [n+1:0]q;
+assign q = {b,1'b0};
+assign out=w[0]+(w[1]<<1)+(w[2]<<2)+(w[3]<<3)+(w[4]<<4)+(w[5]<<5)+(w[6]<<6)+(w[7]<<7);
+genvar i;
+generate
+for(i=0;i<=8;i=i+1)
+begin
+MUX #(.n(8))m1(w[i],a,q[i+1:i]);
+end
+endgenerate
 endmodule
 
-    // carry ripple style
-    module full_addr
-    #(
-        parameter WIDTH = 16
-    )
-    (
-        input      [WIDTH-1:0] a,
-        input      [WIDTH-1:0] b,
-        output reg [WIDTH-1:0] y = 0
-    );
+module MUX #(parameter n=8) (out,a,s);
+output reg [(2*n):0]out;
+input [n:0]a;
+input [1:0]s;
 
-integer i;
-reg [WIDTH-1:0] c = 1;
-generate always @(*) begin
-        c[0] = 0;
-        y[0] = c[0] ^ (a[0] ^ b[0]);
-        c[0] = a[0]&b[0] | b[0]&c[0] | a[0]&c[0];
-        for (i = 1; i < WIDTH; i = i +1) begin
-            y[i] = c[i -1] ^ (a[i] ^ b[i]);
-            c[i] = a[i]&b[i] | b[i]&c[i -1] | a[i]&c[i -1];
-        end
-    end endgenerate
-
+always @ (a,s)
+begin
+case(s)
+2'b00: out<=0;
+2'b01: out<= a;
+2'b10: out<= ~a+1;
+2'b11: out<=0;
+endcase
+end
 endmodule
