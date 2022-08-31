@@ -13,18 +13,18 @@ module user_module_341419328215712339(
 	wire [5:0]sw1 = io_in[7:2];
 
 	//assign io_out = breg_in[15:8] ^ breg_in[7:0];
-	assign io_out = mulout[31:24] ^ mulout[7:0] ^ mulout[15:8];
+	assign io_out = mulout[7:0] ^ mulout[15:8];
 
 
 	reg [16:0]breg;
 	wire [15:0]x = {io_in, io_in};
 
-	wire [15:0]mulin1 = {io_in, io_in};
-	wire [15:0]mulin2 = {io_in, io_in};
-	wire [31:0]mulout;
+	wire [7:0]mulin1 = {io_in, io_in};
+	wire [7:0]mulin2 = {io_in, io_in};
+	wire [15:0]mulout;
 	wire Ld = io_in[7];
 	wire Valid;
-	Booth_Multiplier_1xA #(.N(16)) mul_inst(
+	Booth_Multiplier_1xA #(.N(8)) mul_inst(
 		.Clk(clk),
 		.Rst(rst),
 		.Ld(Ld),
@@ -87,17 +87,17 @@ module user_module_341419328215712339(
 	//end
 endmodule
 
-module add
-#(
-	parameter WIDTH=16
-)
-(
-	input [WIDTH-1:0]a,
-	input [WIDTH-1:0]b,
-	output [WIDTH:0]c
-);
-	assign c = a + b;
-endmodule
+//module add
+//#(
+	//parameter WIDTH=16
+//)
+//(
+	//input [WIDTH-1:0]a,
+	//input [WIDTH-1:0]b,
+	//output [WIDTH:0]c
+//);
+	//assign c = a + b;
+//endmodule
 
 /*
  *  my_multiplier - an unoptimized multiplier
