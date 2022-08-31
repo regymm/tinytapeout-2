@@ -12,14 +12,14 @@ module user_module_341419328215712339(
 	wire rst = io_in[1];
 	wire [5:0]sw1 = io_in[7:2];
 
-	wire [15:0]a = {io_in, io_in};
-	wire [15:0]b = {~io_in, ~io_in};
-	wire [31:0]c_full;
-	wire [15:0]c = c_full[31:16];
+	wire [7:0]a = {io_in, io_in};
+	wire [7:0]b = {~io_in, ~io_in};
+	wire [15:0]c_full;
+	wire [7:0]c = c_full[15:8];
 
-	assign io_out = c[7:0] ^ c[15:8];
+	assign io_out = c[7:0];
 
-	mul #(.WIDTH(16)) mul_inst(
+	mul #(.WIDTH(8)) mul_inst(
 		.a(a),
 		.b(b),
 		.c(c_full)
