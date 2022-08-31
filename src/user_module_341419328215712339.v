@@ -6,22 +6,29 @@
 //  This allows use of the internal clock divider if you wish.
 module user_module_341419328215712339(
 	input [7:0] io_in, 
-	output [7:0] io_out
+	output reg [7:0] io_out
 );
 	wire clk = io_in[0];
 	wire rst = io_in[1];
 	wire [5:0]sw1 = io_in[7:2];
 
 	//assign io_out = breg_in[15:8] ^ breg_in[7:0];
-	assign io_out = mulout[7:0] ^ mulout[15:8];
+	//assign io_out = mulout[31:24] ^ mulout[7:0] ^ mulout[15:8];
 
 
-	reg [16:0]breg;
-	wire [15:0]x = {io_in, io_in};
+	reg [8:0]breg;
+	reg [8:0]breg2;
+	reg [7:0]x;
+	reg [7:0]y;
 
-	wire [7:0]mulin1 = {io_in, io_in};
-	wire [7:0]mulin2 = {io_in, io_in};
-	wire [15:0]mulout;
+	reg [3:0]mulin1;
+	reg [3:0]mulin2;
+	wire [7:0]mulout;
+	mul #(.WIDTH(4)) mul_inst(
+		.a(mulin1),
+		.b(mulin2),
+		.c(mulout)
+	);
 	//wire Ld = io_in[7];
 	//wire Valid;
 	//Booth_Multiplier_1xA #(.N(8)) mul_inst(
@@ -33,80 +40,117 @@ module user_module_341419328215712339(
 		//.R(mulin2),
 		//.P(mulout)
 	//);
-	mul #(.WIDTH(8)) mul_inst(
-		//.Clk(clk),
-		//.Rst(rst),
-		//.Ld(Ld),
-		//.Valid(Valid),
-		.a(mulin1),
-		.b(mulin2),
-		.c(mulout)
+
+	reg [8:0]addin1;
+	reg [8:0]addin2;
+	wire [9:0]addout;
+	add #(.WIDTH(9)) add_inst(
+		.a(addin1),
+		.b(addin2),
+		.c(addout)
 	);
 
-	//reg [15:0]addin1;
-	//reg [15:0]addin2;
-	//wire [16:0]addout;
-	//add #(.WIDTH(16)) add_inst(
-		//.a(addin1),
-		//.b(addin2),
-		//.c(addout)
-	//);
+	wire [7:0]random;
+	lfsr lfsr_inst(
+		.clk(clk),
+		.out(random)
+	);
 
-	//reg [7:0]cnt = 0;
-	//always @ (posedge clk) begin
-		//cnt <= cnt == 10 ? 0 : cnt + 1;
-		//breg <= breg_in;
-	//end
+	reg [3:0]sts = 0;
+	reg [1:0]cnt1 = 0;
+	reg [1:0]cnt2 = 0;
+	always @ (posedge clk) begin
+		if (rst) begin
+			sts <= 0;
+			cnt1 <= 0;
+			cnt2 <= 0;
+			x <= 0;
+		end else begin
+			case (sts)
+				0: begin
+					breg <= 0;
+					x <= random;
+				end
+				4: begin
+					x <= random;
+					breg2 <= breg_in;
+				end
+				9: begin
+					io_out <= addout;
+				end
+			endcase
+			if (sts == 0 || sts == 4) begin
+				x <= random;
+			end
+			sts <= sts == 9 ? 0 : sts + 1;
+			//cnt1 <= cnt1 + 1;
+			//if (cnt1 == 3) cnt2 <= cnt2 + 1;
+			breg <= breg_in;
+		end
+	end
 
-	//reg [16:0]breg_in;
-	//always @ (*) begin
-		//mulin1 = 0;
-		//mulin2 = 0;
-		//addin1 = 0;
-		//addin2 = 0;
-		//breg_in = 0;
-		//case(cnt)
-			//0: begin
-				//mulin1 = x[7:0];
-				//mulin2 = x[7:0];
-				//breg_in = {1'b0, mulout};
-			//end
-			//1: begin
-				//mulin1 = x[15:8];
-				//mulin2 = x[7:0];
-				//addin1 = {8'b0, breg[15:8]};
-				//addin2 = mulout;
-				//breg_in = addout;
-			//end
-			//2: begin
-				//mulin1 = x[7:0];
-				//mulin2 = x[15:8];
-				//addin1 = breg[15:0];
-				//addin2 = mulout;
-				//breg_in = addout;
-			//end
-			//3: begin
-				//mulin1 = x[15:8];
-				//mulin2 = x[15:8];
-				//addin1 = {7'b0, breg[16:8]};
-				//addin2 = mulout;
-				//breg_in = addout;
-			//end
-		//endcase
-	//end
+	reg [8:0]breg_in;
+	always @ (*) begin
+		mulin1 = 0;
+		mulin2 = 0;
+		addin1 = 0;
+		addin2 = 0;
+		breg_in = 0;
+		if (sts == 9) begin
+			addin1 = breg;
+			addin2 = breg2;
+		end else begin
+			case(sts[1:0])
+				2'b01: begin
+					mulin1 = x[3:0];
+					mulin2 = x[3:0];
+					breg_in = {1'b0, mulout};
+				end
+				2'b10: begin
+					mulin1 = x[7:4];
+					mulin2 = x[3:0];
+					addin1 = {4'b0, breg[7:4]};
+					addin2 = mulout;
+					breg_in = addout;
+				end
+				2'b11: begin
+					mulin1 = x[3:0];
+					mulin2 = x[7:4];
+					addin1 = breg[7:0];
+					addin2 = mulout;
+					breg_in = addout;
+				end
+				2'b00: begin
+					mulin1 = x[7:4];
+					mulin2 = x[7:4];
+					addin1 = {3'b0, breg[8:4]};
+					addin2 = mulout;
+					breg_in = addout;
+				end
+			endcase
+		end
+	end
 endmodule
 
-//module add
-//#(
-	//parameter WIDTH=16
-//)
-//(
-	//input [WIDTH-1:0]a,
-	//input [WIDTH-1:0]b,
-	//output [WIDTH:0]c
-//);
-	//assign c = a + b;
-//endmodule
+module add
+#(
+	parameter WIDTH=16
+)
+(
+	input [WIDTH-1:0]a,
+	input [WIDTH-1:0]b,
+	output [WIDTH:0]c
+);
+	assign c = a + b;
+endmodule
+
+module lfsr (out, clk);
+output reg [7:0] out = 8'hff;
+input clk;
+wire feedback = ~(out[7] ^ out[6]);
+always @(posedge clk)
+out <= {out[6:0],feedback};
+endmodule
 
 /*
  *  my_multiplier - an unoptimized multiplier
@@ -191,84 +235,84 @@ generate always @(*) begin
 
 endmodule
 
-/////////////////////////////////////////////////////////////////////////////////
-////
-////  Copyright 2010-2012 by Michael A. Morris, dba M. A. Morris & Associates
-////
-////  All rights reserved. The source code contained herein is publicly released
-////  under the terms and conditions of the GNU Lesser Public License. No part of
-////  this source code may be reproduced or transmitted in any form or by any
-////  means, electronic or mechanical, including photocopying, recording, or any
-////  information storage and retrieval system in violation of the license under
-////  which the source code is released.
-////
-////  The souce code contained herein is free; it may be redistributed and/or 
-////  modified in accordance with the terms of the GNU Lesser General Public
-////  License as published by the Free Software Foundation; either version 2.1 of
-////  the GNU Lesser General Public License, or any later version.
-////
-////  The souce code contained herein is freely released WITHOUT ANY WARRANTY;
-////  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-////  PARTICULAR PURPOSE. (Refer to the GNU Lesser General Public License for
-////  more details.)
-////
-////  A copy of the GNU Lesser General Public License should have been received
-////  along with the source code contained herein; if not, a copy can be obtained
-////  by writing to:
-////
-////  Free Software Foundation, Inc.
-////  51 Franklin Street, Fifth Floor
-////  Boston, MA  02110-1301 USA
-////
-////  Further, no use of this source code is permitted in any form or means
-////  without inclusion of this banner prominently in any derived works. 
-////
-////  Michael A. Morris
-////  Huntsville, AL
-////
-/////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+//
+//  Copyright 2010-2012 by Michael A. Morris, dba M. A. Morris & Associates
+//
+//  All rights reserved. The source code contained herein is publicly released
+//  under the terms and conditions of the GNU Lesser Public License. No part of
+//  this source code may be reproduced or transmitted in any form or by any
+//  means, electronic or mechanical, including photocopying, recording, or any
+//  information storage and retrieval system in violation of the license under
+//  which the source code is released.
+//
+//  The souce code contained herein is free; it may be redistributed and/or 
+//  modified in accordance with the terms of the GNU Lesser General Public
+//  License as published by the Free Software Foundation; either version 2.1 of
+//  the GNU Lesser General Public License, or any later version.
+//
+//  The souce code contained herein is freely released WITHOUT ANY WARRANTY;
+//  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+//  PARTICULAR PURPOSE. (Refer to the GNU Lesser General Public License for
+//  more details.)
+//
+//  A copy of the GNU Lesser General Public License should have been received
+//  along with the source code contained herein; if not, a copy can be obtained
+//  by writing to:
+//
+//  Free Software Foundation, Inc.
+//  51 Franklin Street, Fifth Floor
+//  Boston, MA  02110-1301 USA
+//
+//  Further, no use of this source code is permitted in any form or means
+//  without inclusion of this banner prominently in any derived works. 
+//
+//  Michael A. Morris
+//  Huntsville, AL
+//
+///////////////////////////////////////////////////////////////////////////////
 
 //`timescale 1ns / 1ps
 
-//////////////////////////////////////////////////////////////////////////////////
-//// Company:         M. A. Morris & Associates
-//// Engineer:        Michael A. Morris
-//// 
-//// Create Date:     19:48:02 07/10/2010 
-//// Design Name:     Booth Multiplier (1 bit at a time)
-//// Module Name:     Booth_Multiplier_1xA.v
-//// Project Name:    Booth_Multiplier
-//// Target Devices:  Spartan-3AN
-//// Tool versions:   Xilinx ISE 10.1 SP3
-////
-//// Description:
-////
-////  This module implements a parameterized multiplier which uses the Booth
-////  algorithm for its implementation. The implementation is based on the 
-////  algorithm described in "Computer Organization", Hamacher et al, McGraw-
-////  Hill Book Company, New York, NY, 1978, ISBN: 0-07-025681-0. 
-////
-//// Dependencies: 
-////
-//// Revision: 
-////
-////  0.01    10G10   MAM     File Created
-////
-////  1.00    12I02   MAM     Changed parameterization from a power of 2 to the
-////                          number of bits to match the other modules in this
-////                          family of Booth multipliers. Made the structure of
-////                          the module match that of the x2 and x4 modules.
-////
-////  1.10    12I03   MAM     Changed the implementation technique of the partial
-////                          product summer to match that of the x4A module. This
-////                          reduces the adder to a single adder with a preceed-
-////                          ing multiplexer that generates the proper operand as
-////                          0, M w/ no carry in, or ~M w/ carry input.
-////          
-////
-//// Additional Comments: 
-////
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+// Company:         M. A. Morris & Associates
+// Engineer:        Michael A. Morris
+// 
+// Create Date:     19:48:02 07/10/2010 
+// Design Name:     Booth Multiplier (1 bit at a time)
+// Module Name:     Booth_Multiplier_1xA.v
+// Project Name:    Booth_Multiplier
+// Target Devices:  Spartan-3AN
+// Tool versions:   Xilinx ISE 10.1 SP3
+//
+// Description:
+//
+//  This module implements a parameterized multiplier which uses the Booth
+//  algorithm for its implementation. The implementation is based on the 
+//  algorithm described in "Computer Organization", Hamacher et al, McGraw-
+//  Hill Book Company, New York, NY, 1978, ISBN: 0-07-025681-0. 
+//
+// Dependencies: 
+//
+// Revision: 
+//
+//  0.01    10G10   MAM     File Created
+//
+//  1.00    12I02   MAM     Changed parameterization from a power of 2 to the
+//                          number of bits to match the other modules in this
+//                          family of Booth multipliers. Made the structure of
+//                          the module match that of the x2 and x4 modules.
+//
+//  1.10    12I03   MAM     Changed the implementation technique of the partial
+//                          product summer to match that of the x4A module. This
+//                          reduces the adder to a single adder with a preceed-
+//                          ing multiplexer that generates the proper operand as
+//                          0, M w/ no carry in, or ~M w/ carry input.
+//          
+//
+// Additional Comments: 
+//
+////////////////////////////////////////////////////////////////////////////////
 
 //module Booth_Multiplier_1xA #(
     //parameter N = 16            // Width = N: multiplicand & multiplier
