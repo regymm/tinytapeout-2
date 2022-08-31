@@ -1,21 +1,22 @@
 `timescale 1ns / 1ps
-//`include "user_module_341419328215712339.v"
+//`include "user_module_341521390605697619.v"
 
-module user_module_341419328215712339_tb;
+module user_module_341521390605697619_tb;
 
 wire [7:0] io_in;
 wire [7:0] io_out;
 
 reg clk;
+reg reset = 0;
 
-assign io_in = {7'b0, clk};
+assign io_in = {6'b0, reset, clk};
 
-user_module_341419328215712339 UUT (.io_in(io_in), .io_out(io_out));
+user_module_341521390605697619 UUT (.io_in(io_in), .io_out(io_out));
 
-initial begin
-  $dumpfile("user_module_341419328215712339_tb.vcd");
-  $dumpvars(0, user_module_341419328215712339_tb);
-end
+//initial begin
+  //$dumpfile("new.vcd");
+  //$dumpvars(0, user_module_341419328215712339_tb);
+//end
 
 initial begin
    #100_000_000; // Wait a long time in simulation units (adjust as needed).
@@ -32,13 +33,13 @@ always begin
     #(CLK_HALF_PERIOD);
 end
 
-//initial 
-//begin
-    //#20
-    //reset = 1;
-    //#(CLK_HALF_PERIOD);
-    //reset = 0;
-//end
+initial 
+begin
+	#40
+	reset = 1;
+	#(CLK_HALF_PERIOD);
+	reset = 0;
+end
 
 //initial begin
     //write_en = 0;
