@@ -19,8 +19,8 @@ module user_module_341521390605697619(
 			1: io_out = cnt[15:8];
 			2: io_out = cnt_in[7:0];
 			3: io_out = cnt_in[15:8];
-			4: io_out = {mulin1, mulin2};
-			5: io_out = mulout;
+			//4: io_out = {mulin1, mulin2};
+			//5: io_out = mulout;
 		endcase
 	end
 
@@ -52,15 +52,15 @@ module user_module_341521390605697619(
 		random <= {random[6:0], (random[7] ^ random[6])};
 	end
 
-	reg [3:0]sts = 0;
-	reg [15:0]cnt = 0;
-	reg [15:0]cnt_in = 0;
+	reg [3:0]sts;
+	reg [15:0]cnt;
+	reg [15:0]cnt_in;
 	always @ (posedge clk) begin
 		if (rst) begin
-			sts <= 0;
+			//sts <= 0;
 			cnt <= 0;
 			cnt_in <= 0;
-			x <= 0;
+			//x <= 0;
 		end else begin
 			if (sw1[5] == 0) begin
 				case (sts)
