@@ -12,23 +12,84 @@ module user_module_341419328215712339(
 	wire rst = io_in[1];
 	wire [5:0]sw1 = io_in[7:2];
 
-	wire [7:0]a = {io_in, io_in};
-	wire [7:0]b = {~io_in, ~io_in};
-	wire [15:0]c_full;
-	wire [7:0]c = c_full[15:8];
+	assign io_out = breg_in[15:8] ^ breg_in[7:0];
 
-	assign io_out = c[7:0];
 
+	reg [16:0]breg;
+	wire [15:0]x = {io_in, io_in};
+
+	reg [7:0]mulin1;
+	reg [7:0]mulin2;
+	wire [15:0]mulout;
 	mul #(.WIDTH(8)) mul_inst(
-		.a(a),
-		.b(b),
-		.c(c_full)
+		.a(mulin1),
+		.b(mulin2),
+		.c(mulout)
 	);
 
-	//reg [25:0]cnt = 0;
-	//always @ (posedge clk) begin
-		//cnt <= cnt + 1;
-	//end
+	reg [15:0]addin1;
+	reg [15:0]addin2;
+	wire [16:0]addout;
+	add #(.WIDTH(16)) add_inst(
+		.a(addin1),
+		.b(addin2),
+		.c(addout)
+	);
+
+	reg [7:0]cnt = 0;
+	always @ (posedge clk) begin
+		cnt <= cnt == 10 ? 0 : cnt + 1;
+		breg <= breg_in;
+	end
+
+	reg [16:0]breg_in;
+	always @ (*) begin
+		mulin1 = 0;
+		mulin2 = 0;
+		addin1 = 0;
+		addin2 = 0;
+		breg_in = 0;
+		case(cnt)
+			0: begin
+				mulin1 = x[7:0];
+				mulin2 = x[7:0];
+				breg_in = {1'b0, mulout};
+			end
+			1: begin
+				mulin1 = x[15:8];
+				mulin2 = x[7:0];
+				addin1 = {8'b0, breg[15:8]};
+				addin2 = mulout;
+				breg_in = addout;
+			end
+			2: begin
+				mulin1 = x[7:0];
+				mulin2 = x[15:8];
+				addin1 = breg[15:0];
+				addin2 = mulout;
+				breg_in = addout;
+			end
+			3: begin
+				mulin1 = x[15:8];
+				mulin2 = x[15:8];
+				addin1 = {7'b0, breg[16:8]};
+				addin2 = mulout;
+				breg_in = addout;
+			end
+		endcase
+	end
+endmodule
+
+module add
+#(
+	parameter WIDTH=16
+)
+(
+	input [WIDTH-1:0]a,
+	input [WIDTH-1:0]b,
+	output [WIDTH:0]c
+);
+	assign c = a + b;
 endmodule
 
 /*
