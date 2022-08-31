@@ -12,18 +12,19 @@ module user_module_341419328215712339(
 	wire rst = io_in[1];
 	wire [5:0]sw1 = io_in[7:2];
 
-	assign io_out = breg_in[15:8] ^ breg_in[7:0];
+	//assign io_out = breg_in[15:8] ^ breg_in[7:0];
+	assign io_out = mulout[31:24] ^ mulout[7:0] ^ mulout[15:8];
 
 
 	reg [16:0]breg;
 	wire [15:0]x = {io_in, io_in};
 
-	reg [7:0]mulin1;
-	reg [7:0]mulin2;
-	wire [15:0]mulout;
-	wire Ld = 1;
+	wire [15:0]mulin1 = {io_in, io_in};
+	wire [15:0]mulin2 = {io_in, io_in};
+	wire [31:0]mulout;
+	wire Ld = io_in[7];
 	wire Valid;
-	Booth_Multiplier_1xA #(.N(8)) mul_inst(
+	Booth_Multiplier_1xA #(.N(16)) mul_inst(
 		.Clk(clk),
 		.Rst(rst),
 		.Ld(Ld),
@@ -33,57 +34,57 @@ module user_module_341419328215712339(
 		.P(mulout)
 	);
 
-	reg [15:0]addin1;
-	reg [15:0]addin2;
-	wire [16:0]addout;
-	add #(.WIDTH(16)) add_inst(
-		.a(addin1),
-		.b(addin2),
-		.c(addout)
-	);
+	//reg [15:0]addin1;
+	//reg [15:0]addin2;
+	//wire [16:0]addout;
+	//add #(.WIDTH(16)) add_inst(
+		//.a(addin1),
+		//.b(addin2),
+		//.c(addout)
+	//);
 
-	reg [7:0]cnt = 0;
-	always @ (posedge clk) begin
-		cnt <= cnt == 10 ? 0 : cnt + 1;
-		breg <= breg_in;
-	end
+	//reg [7:0]cnt = 0;
+	//always @ (posedge clk) begin
+		//cnt <= cnt == 10 ? 0 : cnt + 1;
+		//breg <= breg_in;
+	//end
 
-	reg [16:0]breg_in;
-	always @ (*) begin
-		mulin1 = 0;
-		mulin2 = 0;
-		addin1 = 0;
-		addin2 = 0;
-		breg_in = 0;
-		case(cnt)
-			0: begin
-				mulin1 = x[7:0];
-				mulin2 = x[7:0];
-				breg_in = {1'b0, mulout};
-			end
-			1: begin
-				mulin1 = x[15:8];
-				mulin2 = x[7:0];
-				addin1 = {8'b0, breg[15:8]};
-				addin2 = mulout;
-				breg_in = addout;
-			end
-			2: begin
-				mulin1 = x[7:0];
-				mulin2 = x[15:8];
-				addin1 = breg[15:0];
-				addin2 = mulout;
-				breg_in = addout;
-			end
-			3: begin
-				mulin1 = x[15:8];
-				mulin2 = x[15:8];
-				addin1 = {7'b0, breg[16:8]};
-				addin2 = mulout;
-				breg_in = addout;
-			end
-		endcase
-	end
+	//reg [16:0]breg_in;
+	//always @ (*) begin
+		//mulin1 = 0;
+		//mulin2 = 0;
+		//addin1 = 0;
+		//addin2 = 0;
+		//breg_in = 0;
+		//case(cnt)
+			//0: begin
+				//mulin1 = x[7:0];
+				//mulin2 = x[7:0];
+				//breg_in = {1'b0, mulout};
+			//end
+			//1: begin
+				//mulin1 = x[15:8];
+				//mulin2 = x[7:0];
+				//addin1 = {8'b0, breg[15:8]};
+				//addin2 = mulout;
+				//breg_in = addout;
+			//end
+			//2: begin
+				//mulin1 = x[7:0];
+				//mulin2 = x[15:8];
+				//addin1 = breg[15:0];
+				//addin2 = mulout;
+				//breg_in = addout;
+			//end
+			//3: begin
+				//mulin1 = x[15:8];
+				//mulin2 = x[15:8];
+				//addin1 = {7'b0, breg[16:8]};
+				//addin2 = mulout;
+				//breg_in = addout;
+			//end
+		//endcase
+	//end
 endmodule
 
 module add
