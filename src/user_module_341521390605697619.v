@@ -22,7 +22,7 @@ module user_module_341521390605697619(
 		case(sw1[1:0])
 			0: io_out = cnt[7:0];
 			1: io_out = cnt_in[7:0];
-			2: io_out = {cnt[9:8], cnt_in[9:8], 2'b0, cnt[0], cnt_in[0]};
+			2: io_out = {6'b0, cnt[0], cnt_in[0]};
 			//3: io_out = cnt_in[15:8];
 			//4: io_out = {mulin1, mulin2};
 			//5: io_out = mulout;
@@ -58,8 +58,8 @@ module user_module_341521390605697619(
 	end
 
 	reg [3:0]sts;
-	reg [9:0]cnt;
-	reg [9:0]cnt_in;
+	reg [7:0]cnt;
+	reg [7:0]cnt_in;
 	always @ (posedge clk) begin
 		if (rst) begin
 			sts <= 0;
