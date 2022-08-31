@@ -6,45 +6,110 @@
 //  This allows use of the internal clock divider if you wish.
 module user_module_341419328215712339(
 	input [7:0] io_in, 
-	output reg [7:0] io_out
+	output [7:0] io_out
 );
-	wire clk25 = io_in[0];
-	wire [2:0]sw1 = io_in[3:1];
-	reg [25:0]cnt = 0;
-	always @ (posedge clk25) begin
-		cnt <= cnt + 1;
-	end
-	wire clkslow = cnt[4 + sw1];
-	reg [6:0]cntslow = 0;
-	reg [2:0]cntf = 0;
-	always @ (posedge clkslow) begin
-		cntslow <= cntslow == 105 ? 0 : cntslow + 1;
-		if (!cntslow[0]) begin
-			if (cntslow >= 73) begin
-				cntf <= cntf == 4 ? 0 : cntf + 1;
-			end else
-				cntf <= 0;
-		end
-	end
-	reg	[2:0]finalpos;
-	always @ (*) begin
-		finalpos = 0;
-		case (cntf)
-			0: finalpos = 2;
-			1: finalpos = 6;
-			2: finalpos = 0;
-			3: finalpos = 3;
-			4: finalpos = 5;
-		endcase
-	end
-	always @ (*) begin
-		io_out = 0;
-		if (cntslow >= 1 && cntslow <= 8) io_out = 8'b11111111 << (8 - cntslow);
-		else if (cntslow >= 9 && cntslow <= 17) io_out = 8'b11111111 << (cntslow - 9);
-		else if (cntslow >= 18 && cntslow <= 25) io_out = 8'b10000000 >> (cntslow - 18);
-		else if (cntslow >= 26 && cntslow <= 33) io_out = 8'b00000001 << (cntslow - 26);
-		else if (cntslow >= 35 && cntslow <= 55) io_out = cntslow[0] ? 8'b00000000 : 8'b11111111;
-		else if (cntslow >= 56 && cntslow <= 72) io_out = cntslow[0] ? 8'b11110000 : 8'b00001111;
-		else if (cntslow >= 73 && cntslow[0] == 0) io_out = 8'b10000000 >> finalpos;
-	end
+	wire clk = io_in[0];
+	wire rst = io_in[1];
+	wire [5:0]sw1 = io_in[7:2];
+
+	wire [15:0]a = {io_in, io_in};
+	wire [15:0]b = {~io_in, ~io_in};
+	wire [31:0]c_full;
+	wire [15:0]c = c_full[31:16];
+
+	assign io_out = c[7:0] ^ c[15:8];
+
+	mul #(.WIDTH(16)) mul_inst(
+		.a(a),
+		.b(b),
+		.c(c_full)
+	);
+
+	//reg [25:0]cnt = 0;
+	//always @ (posedge clk) begin
+		//cnt <= cnt + 1;
+	//end
+endmodule
+
+/*
+ *  my_multiplier - an unoptimized multiplier
+ *
+ *  copyright (c) 2021  hirosh dabui <hirosh@dabui.de>
+ *
+ *  permission to use, copy, modify, and/or distribute this software for any
+ *  purpose with or without fee is hereby granted, provided that the above
+ *  copyright notice and this permission notice appear in all copies.
+ *
+ *  the software is provided "as is" and the author disclaims all warranties
+ *  with regard to this software including all implied warranties of
+ *  merchantability and fitness. in no event shall the author be liable for
+ *  any special, direct, indirect, or consequential damages or any damages
+ *  whatsoever resulting from loss of use, data or profits, whether in an
+ *  action of contract, negligence or other tortious action, arising out of
+ *  or in connection with the use or performance of this software.
+ *
+ */
+module mul
+#(
+	parameter WIDTH = 16
+)
+(
+	input      [WIDTH-1:0]      a,
+	input      [WIDTH-1:0]      b,
+	output reg [(WIDTH<<1)-1:0] c = 0
+);
+
+reg [(WIDTH<<1)-1:0] tmp;
+
+reg  [(WIDTH<<1)-1:0] add_a[WIDTH-1:0];
+reg  [(WIDTH<<1)-1:0] add_b[WIDTH-1:0];
+wire [(WIDTH<<1)-1:0] add_y[WIDTH-1:0];
+
+genvar k;
+generate for (k = 0; k < WIDTH; k = k +1) begin
+        full_addr #(WIDTH<<1) full_addr_i(add_a[k], add_b[k], add_y[k]);
+    end endgenerate
+
+integer i;
+integer j;
+generate always @(*) begin
+        tmp = 0;
+        c   = 0;
+
+        /* generate parallel structure */
+        for (j = 0; j < WIDTH; j = j + 1) begin
+            for (i = 0; i < WIDTH; i = i + 1) begin
+                tmp[i] = b[i] & a[j];
+            end
+            add_a[j] = c;
+            add_b[j] = (tmp << j);
+            c = add_y[j];
+        end
+    end endgenerate
+
+endmodule
+
+    // carry ripple style
+    module full_addr
+    #(
+        parameter WIDTH = 16
+    )
+    (
+        input      [WIDTH-1:0] a,
+        input      [WIDTH-1:0] b,
+        output reg [WIDTH-1:0] y = 0
+    );
+
+integer i;
+reg [WIDTH-1:0] c = 1;
+generate always @(*) begin
+        c[0] = 0;
+        y[0] = c[0] ^ (a[0] ^ b[0]);
+        c[0] = a[0]&b[0] | b[0]&c[0] | a[0]&c[0];
+        for (i = 1; i < WIDTH; i = i +1) begin
+            y[i] = c[i -1] ^ (a[i] ^ b[i]);
+            c[i] = a[i]&b[i] | b[i]&c[i -1] | a[i]&c[i -1];
+        end
+    end endgenerate
+
 endmodule
