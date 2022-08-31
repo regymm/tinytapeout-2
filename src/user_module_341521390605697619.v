@@ -19,7 +19,7 @@ module user_module_341521390605697619(
 
 	always @ (*) begin
 		io_out = 0;
-		case(sw1[0])
+		case(sw1[1:0])
 			0: io_out = cnt[7:0];
 			1: io_out = cnt_in[7:0];
 			2: io_out = {cnt[9:8], cnt_in[9:8], 2'b0, cnt[0], cnt_in[0]};
