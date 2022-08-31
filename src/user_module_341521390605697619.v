@@ -4,6 +4,11 @@
 //  The pin connections within the user_module are up to you,
 //  although (if one is present) it is recommended to place a clock on io_in[0].
 //  This allows use of the internal clock divider if you wish.
+//
+//  so, just somehow calculate x^2+y^2 with random
+//  0<x, y<1, and compare it with 1
+//  using 8-bit fixed point, [7:0]x means x/2**8
+//  0.0039 resolution is really coarse...
 module user_module_341521390605697619(
 	input [7:0] io_in, 
 	output reg [7:0] io_out
@@ -14,10 +19,9 @@ module user_module_341521390605697619(
 
 	always @ (*) begin
 		io_out = 0;
-		case(sw1[1:0])
+		case(sw1[0])
 			0: io_out = cnt[7:0];
-			1: io_out = {cnt[11:8], cnt_in[11:8]};
-			2: io_out = cnt_in[7:0];
+			1: io_out = cnt_in[7:0];
 			//3: io_out = cnt_in[15:8];
 			//4: io_out = {mulin1, mulin2};
 			//5: io_out = mulout;
@@ -53,8 +57,9 @@ module user_module_341521390605697619(
 	end
 
 	reg [3:0]sts;
-	reg [11:0]cnt;
-	reg [11:0]cnt_in;
+	reg [7:0]cnt;
+	reg [7:0]cnt_in;
+	reg cnt_div;
 	always @ (posedge clk) begin
 		if (rst) begin
 			//sts <= 0;
@@ -73,7 +78,8 @@ module user_module_341521390605697619(
 						breg2 <= breg_in;
 					end
 					9: begin
-						cnt <= cnt + 1;
+						cnt_div <= ~cnt_div;
+						if (cnt_div) cnt <= cnt + 1;
 						if (addout[8]) cnt_in <= cnt_in + 1;
 					end
 				endcase
